@@ -3,7 +3,8 @@ import os
 
 
 class PicoDb:
-    def __init__(self, database_name, indent=None):
+    def __init__(self, database_name, indent=None, structure={}):
+        self.structure = structure
         self.db_name = database_name
         self.indent = indent
         self.db_file = self.open_file()
@@ -15,7 +16,7 @@ class PicoDb:
 
         if self.db_name not in files:
             with open(self.db_name, "w") as f:
-                f.write(json.dumps({}))
+                f.write(json.dumps(self.structure))
 
         return open(self.db_name, 'r')
 
