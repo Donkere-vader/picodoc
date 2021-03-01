@@ -9,7 +9,6 @@ class PicoDb:
         self.db_file = self.open_file()
 
         self.json_obj = self.load(self.db_file)
-        print(self.json_obj)
 
     def open_file(self):
         files = os.listdir()
