@@ -1,14 +1,14 @@
-from picodb import PicoDb
+from picodb import get_db
 
-db = PicoDb("database.json", indent=4)
+db = get_db()
 
-db['users'] = {}
-
-db['users']['user_id'] = {
-    "username": "Example_username",
-    "email": "me@example.com",
+db['test'] = {
+    "test": 123
 }
 
-db.commit()
+db['wat'] = 'test'
+
+test_doc = db['test']
+print(test_doc.parent_doc)
 
 print(db)
