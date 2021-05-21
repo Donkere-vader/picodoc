@@ -120,7 +120,7 @@ def main():
         test = test_dict['test']
         try:
             outcome = test()
-            if str(outcome) != str(test_dict['expected_result']):
+            if str(outcome) != str(test_dict['expected_result']):  # yes converting to str is nessacerry for some reason. Otherwise I'll have to deal with pointer and instance bs.
                 raise UnexpectedResult(f"Expected {test_dict['expected_result']} but encountered {outcome}")
             results[test.__name__] = {
                 "succes": True
