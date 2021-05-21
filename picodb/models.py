@@ -45,6 +45,8 @@ class Document(Model):
             value = field.get_value()
             if type(value) == Document:
                 value = value.to_dict()
+            elif type(value) == List:
+                value = value.get_value()
             obj[field.key] = value
 
         return obj
@@ -57,13 +59,12 @@ class Document(Model):
         database = db
 
 
-class Field(Model):
-    parent = ForeignKeyField(Document, backref="fields")
-    key = CharField()
+class Item(Model):
     value = CharField(null=True)
     value_type = CharField(null=True)
 
     def get_value(self):
+        print(self.value, type(self.value), self.value_type)
         if self.value_type == "str":
             return str(self.value)
         elif self.value_type == "int":
@@ -72,9 +73,10 @@ class Field(Model):
             return True if self.value == "True" else False
         elif self.value_type == "doc":
             return Document.select().where(Document.id == self.value).get()
+        elif self.value_type == "list":
+            return List.select().where(List.id == self.value).get()
 
     def set_value(self, value):
-
         if self.value_type == "doc":
             Document.delete().where(Document.id == self.value).execute()
 
@@ -92,7 +94,17 @@ class Field(Model):
             for key in value:
                 new_doc[key] = value[key]
 
-            self.value = new_doc.id
+            self.value = str(new_doc.id)
+        elif type(value) == list:
+            self.value_type = "list"
+
+            new_list = List(parent=self)
+            new_list.save()
+
+            for item in value:
+                new_list.append(item)
+
+            self.value = str(new_list.id)
 
         if type(value) in [str, int, bool]:
             self.value = str(value)
@@ -101,5 +113,44 @@ class Field(Model):
         database = db
 
 
+class Field(Item):
+    parent = ForeignKeyField(Document, backref="fields")
+    key = CharField()
+
+
+class List(Model):
+    parent = DeferredForeignKey("Field", backref="lists", null=True)
+
+    def get_value(self):
+        return [item.get_value() for item in self.items]
+
+    def append(self, value):
+        new_item = ListItem(parent=self)
+        new_item.set_value(value)
+        new_item.save()
+        print("Value from object:", new_item.value)
+        print("Value from queried object: ", ListItem.select().where(ListItem.id == new_item.id).get().value)
+
+    def remove(self, value):
+        for field in self.fields:
+            if field.get_value() == value:
+                field.delete_instance()
+                return
+
+    def __getitem__(self, idx):
+        pass
+
+    def __setitem__(self, idx, value):
+        pass
+
+    class Meta:
+        database = db
+
+
+class ListItem(Item):
+    parent = ForeignKeyField(List, backref="items")
+    value = CharField
+
+
 db.connect()
-db.create_tables([Document, Field])
+db.create_tables([Document, Field, List, ListItem])

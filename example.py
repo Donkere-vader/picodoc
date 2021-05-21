@@ -6,9 +6,8 @@ db['test'] = {
     "test": 123
 }
 
-db['wat'] = 'test'
-
-test_doc = db['test']
-print(test_doc.parent_doc)
+db['wat'] = [1, 2, 3]
+print(db)
+print(db['wat'][0])
 
 print(db)
