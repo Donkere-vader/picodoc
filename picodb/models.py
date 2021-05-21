@@ -1,4 +1,4 @@
-from peewee import BooleanField, ForeignKeyField, Model, SqliteDatabase, CharField, DeferredForeignKey
+from peewee import BooleanField, ForeignKeyField, IntegerField, Model, SqliteDatabase, CharField, DeferredForeignKey
 import json
 
 
@@ -64,7 +64,6 @@ class Item(Model):
     value_type = CharField(null=True)
 
     def get_value(self):
-        print(self.value, type(self.value), self.value_type)
         if self.value_type == "str":
             return str(self.value)
         elif self.value_type == "int":
@@ -99,6 +98,7 @@ class Item(Model):
             self.value_type = "list"
 
             new_list = List(parent=self)
+            print(new_list.__data__, new_list.parent, new_list.length, self.value)
             new_list.save()
 
             for item in value:
@@ -120,28 +120,41 @@ class Field(Item):
 
 class List(Model):
     parent = DeferredForeignKey("Field", backref="lists", null=True)
+    length = IntegerField(default=0)
 
     def get_value(self):
         return [item.get_value() for item in self.items]
 
     def append(self, value):
-        new_item = ListItem(parent=self)
+        new_item = ListItem(parent=self, idx=self.length + 1)
         new_item.set_value(value)
+        self.length += 1
         new_item.save()
-        print("Value from object:", new_item.value)
-        print("Value from queried object: ", ListItem.select().where(ListItem.id == new_item.id).get().value)
+        self.save()
 
     def remove(self, value):
-        for field in self.fields:
-            if field.get_value() == value:
-                field.delete_instance()
-                return
+        item = ListItem.select().where(ListItem.parent == self and ListItem.value == value).get()
+        self.update_idxs(item.idx, -1)
+        self.length -= 1
+        item.delete_instance()
+        self.save()
+
+    def insert(self, idx, value):
+        self.update_idxs(idx, 1)
+        new_item = ListItem(parent=self, idx=idx)
+        self.length += 1
+        new_item.set_value(value)
+        new_item.save()
+        self.save()
+
+    def update_idxs(self, frm, value_to_change):
+        ListItem.update(idx=value_to_change).where(ListItem.parent == self and ListItem.idx > frm)
 
     def __getitem__(self, idx):
-        pass
+        return ListItem.select().where(ListItem.parent == self and ListItem.idx == idx).get()
 
     def __setitem__(self, idx, value):
-        pass
+        ListItem.update(value=value).where(ListItem.parent == self and ListItem.idx == idx)
 
     class Meta:
         database = db
@@ -149,7 +162,7 @@ class List(Model):
 
 class ListItem(Item):
     parent = ForeignKeyField(List, backref="items")
-    value = CharField
+    value = CharField()
 
 
 db.connect()

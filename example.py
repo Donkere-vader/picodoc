@@ -8,6 +8,5 @@ db['test'] = {
 
 db['wat'] = [1, 2, 3]
 print(db)
+print(db['wat'])
 print(db['wat'][0])
-
-print(db)
