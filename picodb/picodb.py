@@ -2,10 +2,10 @@ from .models import Document
 
 
 def get_db():
-    root = Document.select().where(Document.root)
+    root = Document.select().where(Document.key_id == "root")
     if root.exists():
         root = root.get()
     else:
-        root = Document(root=True, parent=None)
+        root = Document(key_id="root", parent=None)
         root.save()
     return root

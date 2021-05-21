@@ -1,4 +1,5 @@
 from peewee import BooleanField, ForeignKeyField, IntegerField, Model, SqliteDatabase, CharField, DeferredForeignKey
+from .config import SUPPORTED_TYPES
 import json
 
 
@@ -6,164 +7,97 @@ db = SqliteDatabase('database.sqlite')
 
 
 class Document(Model):
-    root = BooleanField(default=False)
-    parent = DeferredForeignKey("Field", backref="documents", null=True)
-
-    def __str__(self):
-        return repr(self)
-
-    def __repr__(self):
-        return json.dumps(self.to_dict(), indent=4)
-
-    def __getitem__(self, key):
-        field = self.fields.select().where(Field.key == key)
-        if not field.exists():
-            return None
-        return field.get().get_value()
-
-    def __setitem__(self, key, value):
-        field = self.fields.select().where(Field.key == key)
-        if not field.exists():
-            field = Field(parent=self, key=key, value=None, value_type=None)
-        else:
-            field = field.get()
-        field.set_value(value)
-        field.save()
-
-    def __delitem__(self, key):
-        field = self.fields.select().where(Field.key == key)
-        if not field.exists():
-            return
-        else:
-            field = field.get()
-            field.delete_instance()
-
-    def to_dict(self):
-        obj = {}
-
-        for field in self.fields:
-            value = field.get_value()
-            if type(value) == Document:
-                value = value.to_dict()
-            elif type(value) == List:
-                value = value.get_value()
-            obj[field.key] = value
-
-        return obj
-
-    @property
-    def parent_doc(self):
-        return self.parent.parent
+    key_id = CharField()
+    parent = ForeignKeyField('self', backref='documents', null=True)
+    str_value = CharField(null=True)
+    value_type = CharField(default="dict")
 
     class Meta:
         database = db
 
+    @property
+    def value(self):
+        for tpe in [int, str, float]:
+            if self.value_type == tpe.__name__:
+                return tpe(self.str_value)
+        if self.value_type == bool.__name__:
+            return True if self.str_value == "True" else False
 
-class Item(Model):
-    value = CharField(null=True)
-    value_type = CharField(null=True)
+    def __setitem__(self, key, value):
+        del self[key]
 
-    def get_value(self):
-        if self.value_type == "str":
-            return str(self.value)
-        elif self.value_type == "int":
-            return int(self.value)
-        elif self.value_type == "bool":
-            return True if self.value == "True" else False
-        elif self.value_type == "doc":
-            return Document.select().where(Document.id == self.value).get()
-        elif self.value_type == "list":
-            return List.select().where(List.id == self.value).get()
+        value_type = str(type(value).__name__)
+        if value_type not in SUPPORTED_TYPES:
+            raise ValueError(f"'{value_type}' is not one of the supported types: {' '.join(SUPPORTED_TYPES)}")
+        str_value = None
+        if type(value) in [int, str, float, bool]:
+            str_value = str(value)
 
-    def set_value(self, value):
-        if self.value_type == "doc":
-            Document.delete().where(Document.id == self.value).execute()
+        new_doc = Document(key_id=key, parent=self, str_value=str_value, value_type=value_type)
+        new_doc.save()
 
-        if type(value) == str:
-            self.value_type = "str"
-        elif type(value) == int:
-            self.value_type = "int"
-        elif type(value) == bool:
-            self.value_type = "bool"
-        elif type(value) == dict:
-            self.value_type = "doc"
-
-            new_doc = Document(parent=self)
-            new_doc.save()
+        if value_type == "dict":
             for key in value:
                 new_doc[key] = value[key]
 
-            self.value = str(new_doc.id)
-        elif type(value) == list:
-            self.value_type = "list"
+    def __getitem__(self, key):
+        query = self.select().where(Document.key_id == key and Document.parent == self)
+        if not query.exists():
+            raise KeyError(f"Document {self.object_repr()} does not contain key '{key}'")
+        doc = query.get()
+        return doc if doc.value_type == "dict" else doc.value
 
-            new_list = List(parent=self)
-            print(new_list.__data__, new_list.parent, new_list.length, self.value)
-            new_list.save()
+    def __str__(self) -> str:
+        return repr(self)
 
-            for item in value:
-                new_list.append(item)
+    def __repr__(self) -> str:
+        return json.dumps(self.to_dict(), indent=4)
 
-            self.value = str(new_list.id)
+    def to_dict(self):
+        if self.value_type == "dict":
+            obj = {}
+            for doc in self.documents:
+                obj[doc.key_id] = doc.to_dict()
+        elif self.value_type == "list":
+            obj = "list...placeholder"
+        else:
+            return self.value
 
-        if type(value) in [str, int, bool]:
-            self.value = str(value)
+        return obj
 
-    class Meta:
-        database = db
+    def object_repr(self) -> str:
+        return f"<Document {self.key_id} {self.id}>"
 
-
-class Field(Item):
-    parent = ForeignKeyField(Document, backref="fields")
-    key = CharField()
-
-
-class List(Model):
-    parent = DeferredForeignKey("Field", backref="lists", null=True)
-    length = IntegerField(default=0)
-
-    def get_value(self):
-        return [item.get_value() for item in self.items]
-
-    def append(self, value):
-        new_item = ListItem(parent=self, idx=self.length + 1)
-        new_item.set_value(value)
-        self.length += 1
-        new_item.save()
-        self.save()
-
-    def remove(self, value):
-        item = ListItem.select().where(ListItem.parent == self and ListItem.value == value).get()
-        self.update_idxs(item.idx, -1)
-        self.length -= 1
-        item.delete_instance()
-        self.save()
-
-    def insert(self, idx, value):
-        self.update_idxs(idx, 1)
-        new_item = ListItem(parent=self, idx=idx)
-        self.length += 1
-        new_item.set_value(value)
-        new_item.save()
-        self.save()
-
-    def update_idxs(self, frm, value_to_change):
-        ListItem.update(idx=value_to_change).where(ListItem.parent == self and ListItem.idx > frm)
-
-    def __getitem__(self, idx):
-        return ListItem.select().where(ListItem.parent == self and ListItem.idx == idx).get()
-
-    def __setitem__(self, idx, value):
-        ListItem.update(value=value).where(ListItem.parent == self and ListItem.idx == idx)
-
-    class Meta:
-        database = db
+    def __delitem__(self, key):
+        self.delete().where(Document.key_id == key and Document.parent == self)
 
 
-class ListItem(Item):
-    parent = ForeignKeyField(List, backref="items")
-    value = CharField()
+# class Value(Model):
 
+#     def set_value(self, value):
+#         pass
+
+#     def get_value(self):
+#         if self.value_type == "str":
+#             return self.str_value
+#         elif self.value_type == "int":
+#             return int(self.str_value)
+#         elif self.value_type == "float":
+#             return float(self.str_value)
+#         elif self.value_type == "bool":
+#             return True if self.str_value == "True" else False
+#         elif self.value_type == "doc":
+#             return Document.select().where(Document.id == int(self.str_value)).get()
+
+#     @property
+#     def value(self):
+#         return self.get_value()
+
+#     def __setattr__(self, name, value) -> None:
+#         if name == "value":
+#             self.set_value(value)
+#             return
+#         return super().__setattr__(name, value)
 
 db.connect()
-db.create_tables([Document, Field, List, ListItem])
+db.create_tables([Document])
