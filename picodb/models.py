@@ -3,14 +3,14 @@ from .config import SUPPORTED_TYPES
 import json
 
 
-db = SqliteDatabase('database.sqlite')
+db = SqliteDatabase(None)
 
 
 class Document(Model):
     key_id = CharField()
     parent = ForeignKeyField('self', backref='documents', null=True)
     str_value = CharField(null=True)
-    value_type = CharField(default="dict")
+    value_type = CharField(default=dict.__name__)
 
     class Meta:
         database = db
@@ -23,7 +23,9 @@ class Document(Model):
         if self.value_type == bool.__name__:
             return True if self.str_value == "True" else False
 
-    def __setitem__(self, key, value):
+    def __setitem__(self, key, value, force_insert=False):
+        if self.value_type == list.__name__ and key > Document.select().where(Document.parent == self).count() and not force_insert:
+            raise IndexError(f"Index {key} out of bounds")
         del self[key]
 
         value_type = str(type(value).__name__)
@@ -36,16 +38,25 @@ class Document(Model):
         new_doc = Document(key_id=key, parent=self, str_value=str_value, value_type=value_type)
         new_doc.save()
 
-        if value_type == "dict":
+        if value_type == dict.__name__:
             for key in value:
                 new_doc[key] = value[key]
+        elif value_type == list.__name__:
+            for idx, item in enumerate(value):
+                new_doc[idx] = item
+
+    def append(self, item):
+        if self.value_type != list.__name__:
+            raise TypeError(f"'{self.value_type}' has no attribute append")
+        length = Document.select().where(Document.parent == self).count()
+        self.__setitem__(length, item, force_insert=True)
 
     def __getitem__(self, key):
-        query = self.select().where(Document.key_id == key and Document.parent == self)
+        query = self.select().where((Document.key_id == key) & (Document.parent == self))
         if not query.exists():
             raise KeyError(f"Document {self.object_repr()} does not contain key '{key}'")
         doc = query.get()
-        return doc if doc.value_type == "dict" else doc.value
+        return doc if doc.value_type in [dict.__name__, list.__name__] else doc.value
 
     def __str__(self) -> str:
         return repr(self)
@@ -53,13 +64,18 @@ class Document(Model):
     def __repr__(self) -> str:
         return json.dumps(self.to_dict(), indent=4)
 
+    def __delitem__(self, key):
+        self.delete().where((Document.key_id == key) & (Document.parent == self)).execute()
+
     def to_dict(self):
-        if self.value_type == "dict":
+        if self.value_type == dict.__name__:
             obj = {}
             for doc in self.documents:
                 obj[doc.key_id] = doc.to_dict()
-        elif self.value_type == "list":
-            obj = "list...placeholder"
+        elif self.value_type == list.__name__:
+            obj = [None for _ in range(Document.select().where(Document.parent == self).count())]
+            for doc in self.documents:
+                obj[int(doc.key_id)] = doc
         else:
             return self.value
 
@@ -67,37 +83,3 @@ class Document(Model):
 
     def object_repr(self) -> str:
         return f"<Document {self.key_id} {self.id}>"
-
-    def __delitem__(self, key):
-        self.delete().where(Document.key_id == key and Document.parent == self)
-
-
-# class Value(Model):
-
-#     def set_value(self, value):
-#         pass
-
-#     def get_value(self):
-#         if self.value_type == "str":
-#             return self.str_value
-#         elif self.value_type == "int":
-#             return int(self.str_value)
-#         elif self.value_type == "float":
-#             return float(self.str_value)
-#         elif self.value_type == "bool":
-#             return True if self.str_value == "True" else False
-#         elif self.value_type == "doc":
-#             return Document.select().where(Document.id == int(self.str_value)).get()
-
-#     @property
-#     def value(self):
-#         return self.get_value()
-
-#     def __setattr__(self, name, value) -> None:
-#         if name == "value":
-#             self.set_value(value)
-#             return
-#         return super().__setattr__(name, value)
-
-db.connect()
-db.create_tables([Document])

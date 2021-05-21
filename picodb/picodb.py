@@ -1,7 +1,11 @@
-from .models import Document
+from .models import Document, db
 
 
-def get_db():
+def open_db(database_name):
+    db.init(database_name)
+    db.connect()
+    db.create_tables([Document])
+
     root = Document.select().where(Document.key_id == "root")
     if root.exists():
         root = root.get()
