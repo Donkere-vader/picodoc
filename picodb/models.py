@@ -51,6 +51,12 @@ class Document(Model):
         length = Document.select().where(Document.parent == self).count()
         self.__setitem__(length, item, force_insert=True)
 
+    def remove(self, idx):
+        if self.value_type != list.__name__:
+            raise TypeError(f"'{self.value_type}' has no attribute append")
+
+        del self[idx]
+
     def __getitem__(self, key):
         query = self.select().where((Document.key_id == key) & (Document.parent == self))
         if not query.exists():
