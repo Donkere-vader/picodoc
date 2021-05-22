@@ -49,6 +49,21 @@ def list_test():
     return db.to_dict()
 
 
+def iter_test():
+    db = open_db(TEST_DB_NAME)
+    db['value'] = [0, 1, 2]
+    obj = {
+        "list": [],
+        "dict": {}
+    }
+    for item in db['value']:
+        obj['list'].append(item + 1)
+    db['value2'] = {'test': 0, 'test1': 1}
+    for key in db['value2']:
+        obj['dict'][key] = db['value2'][key] + 1
+    return obj
+
+
 def nested_test():
     db = open_db(TEST_DB_NAME)
 
@@ -90,6 +105,16 @@ tests = [
         },
     },
     {
+        "test": iter_test,
+        "expected_result": {
+            "list": [1, 2, 3],
+            "dict": {
+                'test': 1,
+                'test1': 2,
+            }
+        }
+    },
+    {
         "test": nested_test,
         "expected_result": {
             "posts": {},
@@ -97,7 +122,7 @@ tests = [
                 "donkere.v": "That's me!"
             },
         },
-    }
+    },
 ]
 
 ####################

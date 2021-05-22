@@ -73,6 +73,13 @@ class Document(Model):
     def __delitem__(self, key):
         self.delete().where((Document.key_id == key) & (Document.parent == self)).execute()
 
+    def __iter__(self):
+        if self.value_type not in [dict.__name__, list.__name__]:
+            raise TypeError(f"'{self.value_type}' is not iterable ")
+
+        for doc in self.documents:
+            yield doc.value if self.value_type == list.__name__ else doc.key_id
+
     def to_dict(self):
         if self.value_type == dict.__name__:
             obj = {}
