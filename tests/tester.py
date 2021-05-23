@@ -1,7 +1,6 @@
-from picodoc import open_db
+from src.picodoc import open_db
 from rich import print
 import os
-
 
 TEST_DB_NAME = "picodb_temp_tests_database.db"
 
