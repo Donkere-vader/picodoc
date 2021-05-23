@@ -97,3 +97,15 @@ print(db['users']['donkere.v'].object_repr())
 ### Tip
 
 Use the [rich module](https://github.com/willmcgugan/rich) for beautiful output in the console.
+
+## Testing
+
+Testing is done via the ``runtests`` file.
+
+To run all the tests simply do:
+
+```sh
+python3 runtests
+```
+
+(If you are on windows use ``python`` in stead of ``python3``)

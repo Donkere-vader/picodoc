@@ -1,1 +1,1 @@
-from .tester import run_tests
+from .test_db import TestDatabase

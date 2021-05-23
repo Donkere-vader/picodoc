@@ -1,9 +1,12 @@
 #!/bin/python3
 
-from tests import run_tests
+import unittest
+from tests import TestDatabase
 import argparse
-
 import sys
+import os
+import tests.config
+
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description='Run tests for the picodoc module')
@@ -19,7 +22,14 @@ if __name__ == "__main__":
     )
     args = parser.parse_args()
 
-    run_tests(
-        keep_db=args.keep_db,
-        force_db_reset=args.force_db_reset,
+    if tests.config.TEST_DB_NAME in os.listdir() and not args.force_db_reset:
+        if input(f"Database '{tests.config.TEST_DB_NAME}' Already exists. Continuing will delete all data.\nDo you wish to continue? [Y/n] ").lower().strip() not in ["y", ""]:
+            exit()
+
+    unittest.main(
+        exit=False,
+        argv=[sys.argv[0]]
     )
+
+    if not args.keep_db and tests.config.TEST_DB_NAME in os.listdir():
+        os.remove(tests.config.TEST_DB_NAME)
