@@ -1,4 +1,4 @@
-from picodb import open_db
+from picodoc import open_db
 from rich import print
 import os
 
