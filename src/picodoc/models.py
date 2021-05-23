@@ -68,7 +68,10 @@ class Document(Model):
         return repr(self)
 
     def __repr__(self) -> str:
-        return json.dumps(self.to_dict(), indent=4)
+        return "\n".join([
+            self.object_repr(),
+            json.dumps(self.to_dict(), indent=4),
+        ])
 
     def __delitem__(self, key):
         self.delete().where((Document.key_id == key) & (Document.parent == self)).execute()
@@ -99,4 +102,4 @@ class Document(Model):
         return obj
 
     def object_repr(self) -> str:
-        return f"<Document {self.key_id} {self.id}>"
+        return f"<Document {self.key_id}>"
