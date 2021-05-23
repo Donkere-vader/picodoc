@@ -1,0 +1,25 @@
+#!/bin/python3
+
+from tests import run_tests
+import argparse
+
+import sys
+
+if __name__ == "__main__":
+    parser = argparse.ArgumentParser(description='Run tests for the picodoc module')
+    parser.add_argument(
+        '--keep-db',
+        action='store_true',
+        help='Keep the testing db after the testing is done.'
+    )
+    parser.add_argument(
+        '--force-db-reset',
+        action='store_true',
+        help='Force reset the testing DB if it already exists.'
+    )
+    args = parser.parse_args()
+
+    run_tests(
+        keep_db=args.keep_db,
+        force_db_reset=args.force_db_reset,
+    )

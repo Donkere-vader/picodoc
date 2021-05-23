@@ -1,4 +1,1 @@
-from .tester import main
-
-def run_tests():
-    main()
+from .tester import run_tests
