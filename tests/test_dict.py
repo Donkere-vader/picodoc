@@ -1,4 +1,4 @@
-from src.picodoc import open_db
+from picodoc import open_db
 import unittest
 from .config import TEST_DB_NAME
 

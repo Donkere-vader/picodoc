@@ -16,4 +16,4 @@ dog
 # build
 build/
 dist/
-src/picodoc.egg-info
+picodoc.egg-info
