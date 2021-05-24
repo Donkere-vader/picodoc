@@ -80,15 +80,21 @@ class Document(Model):
             json.dumps(self.to_dict(), indent=4),
         ])
 
-    def to_dict(self):
+    def to_dict(self, exclude=[]):
         if self.value_type == dict.__name__:
             obj = {}
             for doc in self.documents:
+                if doc.key_id in exclude:
+                    continue
                 obj[doc.key_id] = doc.to_dict()
         elif self.value_type == list.__name__:
             obj = [None for _ in range(Document.select().where(Document.parent == self).count())]
             for doc in self.documents:
+                if int(doc.key_id) in exclude:
+                    continue
                 obj[int(doc.key_id)] = doc.to_dict()
+            while None in obj:
+                obj.remove(None)
         else:
             return self.value
 
