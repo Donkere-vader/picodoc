@@ -27,3 +27,10 @@ class TestDict(unittest.TestCase):
     def test_iter(self):
         keys = [key for key in self.db['users']]
         self.assertEqual(keys, ["donkere.v"])
+
+    def test_same_key(self):
+        self.db['test'] = {}
+        self.db['test']['donkere.v'] = {
+            "name": "wat"
+        }
+        self.assertEqual(self.db.to_dict(), {'users': {'donkere.v': {'name': 'Donkere Vader'}}, 'test': {'donkere.v': {'name': 'wat'}}})
