@@ -31,6 +31,9 @@ if __name__ == "__main__":
         if input(f"Database '{tests.config.TEST_DB_NAME}' Already exists. Continuing will delete all data.\nDo you wish to continue? [Y/n] ").lower().strip() not in ["y", ""]:
             exit()
 
+    if tests.config.TEST_DB_NAME in os.listdir():
+        os.remove(tests.config.TEST_DB_NAME)
+
     unittest.main(
         exit=False,
         argv=[sys.argv[0]],

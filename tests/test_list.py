@@ -9,7 +9,7 @@ class TestList(unittest.TestCase):
         self.db['numbers'] = [0, 1, 2, 3]
 
     def tearDown(self):
-        self.db.reset()
+        self.db.drop_db()
 
     def test_del_idx(self):
         del self.db['numbers'][0]

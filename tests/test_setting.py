@@ -8,7 +8,7 @@ class TestSetting(unittest.TestCase):
         self.db = open_db(TEST_DB_NAME)
 
     def tearDown(self):
-        self.db.reset()
+        self.db.drop_db()
 
     def test_set_to_string(self):
         self.db['test'] = "str"

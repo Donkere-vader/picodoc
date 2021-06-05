@@ -1,1 +1,1 @@
-SUPPORTED_TYPES = ['str', 'int', 'float', 'bool', 'dict', 'list']
+SUPPORTED_TYPES = ['str', 'int', 'float', 'bool', 'dict', 'list', 'Document']

@@ -14,7 +14,7 @@ class TestConvert(unittest.TestCase):
         self.db['list'] = ["hello", "secret", "test"]
 
     def tearDown(self):
-        self.db.reset()
+        self.db.drop_db()
 
     def test_dict_exclude(self):
         dct = self.db['users']['donkere.v'].to_dict(exclude=["private_field"])

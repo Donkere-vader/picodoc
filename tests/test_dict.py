@@ -12,7 +12,7 @@ class TestDict(unittest.TestCase):
         }
 
     def tearDown(self):
-        self.db.reset()
+        self.db.drop_db()
 
     def test_del_key(self):
         del self.db['users']['donkere.v']
@@ -34,3 +34,8 @@ class TestDict(unittest.TestCase):
             "name": "wat"
         }
         self.assertEqual(self.db.to_dict(), {'users': {'donkere.v': {'name': 'Donkere Vader'}}, 'test': {'donkere.v': {'name': 'wat'}}})
+
+    def test_set_to_doc(self):
+        self.db['item'] = {'test': '123'}
+        self.db['item2'] = self.db['item']
+        self.assertEqual(self.db['item2'].to_dict(), self.db['item'].to_dict())

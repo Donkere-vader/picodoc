@@ -8,7 +8,7 @@ db = SqliteDatabase(None)
 
 class Document(Model):
     key_id = CharField()
-    parent = ForeignKeyField('self', backref='documents', null=True)
+    parent = ForeignKeyField('self', backref='documents', null=True, on_delete="CASCADE")
     str_value = CharField(null=True)
     value_type = CharField(default=dict.__name__)
 
@@ -23,16 +23,17 @@ class Document(Model):
             self.__delitem__(key, fix_indexes=False)
 
         value_type = str(type(value).__name__)
+        value_type = dict.__name__ if value_type == Document.__name__ else value_type
         if value_type not in SUPPORTED_TYPES:
             raise ValueError(f"'{value_type}' is not one of the supported types: {' '.join(SUPPORTED_TYPES)}")
         str_value = None
-        if type(value) in [int, str, float, bool]:
+        if type(value).__name__ in [int.__name__, str.__name__, float.__name__, bool.__name__]:
             str_value = str(value)
 
         new_doc = Document(key_id=key, parent=self, str_value=str_value, value_type=value_type)
         new_doc.save()
 
-        if value_type == dict.__name__:
+        if value_type in [dict.__name__, Document.__name__]:
             for key in value:
                 new_doc[key] = value[key]
         elif value_type == list.__name__:
@@ -123,6 +124,11 @@ class Document(Model):
     def reset(self):
         for doc in self.documents:
             doc.delete_instance()
+
+    def drop_db(self):
+        if self.parent is not None:
+            raise AttributeError("Method can only be called from database root")
+        Document.delete().execute()
 
     def object_repr(self) -> str:
         return f"<Document {self.key_id}>"
