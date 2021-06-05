@@ -5,6 +5,7 @@ name = "pypi"
 
 [packages]
 peewee = ">=3.14.4"
+build = "*"
 
 [dev-packages]
 build = ">=0.3.1.post1"
