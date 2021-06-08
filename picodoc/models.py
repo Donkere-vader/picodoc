@@ -115,11 +115,19 @@ class Document(Model):
         length = Document.select().where(Document.parent == self).count()
         self.__setitem__(length, item, force_insert=True)
 
-    def remove(self, idx):
+    def remove(self, value):
         if self.value_type != list.__name__:
             raise AttributeError(f"'{self.value_type}' has no attribute append")
 
-        del self[idx]
+        found = False
+        for idx, item in enumerate(self):
+            if item == value or item.to_dict() == value:
+                del self[idx]
+                found = True
+                break
+
+        if not found:
+            raise ValueError(f"'{value}' not in list")
 
     def reset(self):
         for doc in self.documents:
